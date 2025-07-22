@@ -1,7 +1,7 @@
 # Usa PHP 8.3 con Apache
 FROM php:8.3-apache
 
-# Instala dependencias del sistema
+# Instala dependencias del sistema (¡formato correcto!)
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libzip-dev \
     libicu-dev \
-    libsodium-dev \  # Reemplaza libmcrypt-dev
+    libsodium-dev \
     libonig-dev \
     && docker-php-ext-install pdo pdo_mysql zip gd intl bcmath sodium
 
@@ -23,7 +23,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Directorio de trabajo
 WORKDIR /var/www/html
 
-# 1. Copia solo los archivos necesarios primero (evita node_modules/, vendor/, etc.)
+# 1. Copia solo los archivos necesarios primero
 COPY composer.json composer.lock ./
 
 # 2. Instala dependencias (sin archivos de desarrollo)
