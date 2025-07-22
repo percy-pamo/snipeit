@@ -15,10 +15,12 @@ RUN apt-get update && apt-get install -y \
     zip \
     libpq-dev \
     libicu-dev \
+    libmcrypt-dev \
+    libssl-dev \
     zlib1g-dev \
     libxslt1-dev \
     libjpeg62-turbo-dev \
-    && docker-php-ext-install pdo pdo_mysql zip gd bcmath intl
+    && docker-php-ext-install pdo pdo_mysql zip gd bcmath
 
 # Habilita mod_rewrite
 RUN a2enmod rewrite
@@ -29,25 +31,19 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Establece directorio de trabajo
 WORKDIR /var/www/html
 
-# Copia primero los archivos necesarios para Composer
-COPY composer.json composer.lock ./
+# Copia los archivos del proyecto al contenedor
+COPY . /var/www/html
 
-# Copia el archivo .env (si ya lo tienes creado, mejor)
-COPY .env .env
-
-# Ejecuta composer install (antes de copiar todo el proyecto)
+# Instala dependencias PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Ahora copia todo el resto del proyecto
-COPY . .
-
-# Asegura permisos correctos
+# Corrige permisos
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
+    && chmod -R 755 /var/www/html
     && chmod -R 775 storage bootstrap/cache
 
-# Expone el puerto
+# Expone el puerto 80
 EXPOSE 80
 
-# Comando por defecto
+# Define el comando por defecto
 CMD ["apache2-foreground"]
