@@ -1,6 +1,6 @@
 FROM php:8.3-apache
 
-# Instala dependencias del sistema
+# 1. Instala dependencias del sistema (incluyendo GD, Sodium, ZIP)
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -10,39 +10,36 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libicu-dev \
     libsodium-dev \
-    libonig-dev \
-    && docker-php-ext-install pdo pdo_mysql zip gd intl bcmath sodium
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_mysql \
+        zip \
+        intl \
+        gd \
+        sodium
 
-# Habilita mod_rewrite
-RUN a2enmod rewrite headers
+# 2. Habilita mod_rewrite
+RUN a2enmod rewrite
 
-# Crea usuario no-root
-RUN useradd -G www-data,root -d /home/snipe snipe \
-    && mkdir -p /home/snipe \
-    && chown -R snipe:snipe /home/snipe
-
-# Instala Composer
+# 3. Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Directorio de trabajo y usuario
+# 4. Directorio de trabajo
 WORKDIR /var/www/html
-USER snipe
 
-# 1. Copia solo los archivos necesarios para composer
-COPY --chown=snipe:snipe composer.json composer.lock ./
+# 5. Copia SOLO archivos necesarios para composer
+COPY composer.json composer.lock ./
 
-# 2. Instala dependencias
+# 6. Instala dependencias (sin desarrollo)
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# 3. Copia el resto del código
-COPY --chown=snipe:snipe . .
+# 7. Copia el resto del proyecto
+COPY . .
 
-# Permisos
-RUN chmod -R 775 storage bootstrap/cache vendor
+# 8. Ajusta permisos
+RUN chmod -R 775 storage bootstrap/cache
 
-# Puerto expuesto
+# 9. Puerto y comando
 EXPOSE 80
-
-# Comando de inicio (como root)
-USER root
 CMD ["apache2-foreground"]
