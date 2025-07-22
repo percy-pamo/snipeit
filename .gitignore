@@ -8,7 +8,6 @@ phpstan.neon
 /bootstrap/compiled.php
 /node_modules
 /vendor
-app/database/*.sqlite
 app/storage/meta/services.json
 composer.phar
 crowdin.yaml
