@@ -3,8 +3,10 @@ FROM php:8.3-apache
 # 1. Instalación de extensiones necesarias (PHP 8.2+)
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libonig-dev libxml2-dev zip libzip-dev supervisor \
-    && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl xml bcmath \
-    && docker-php-ext-enable sodium fileinfo intl gd
+    libjpeg-dev libfreetype6-dev libicu-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl xml bcmath intl gd \
+    && docker-php-ext-enable sodium
 
 # 2. Habilitar mod_rewrite para Laravel
 RUN a2enmod rewrite
