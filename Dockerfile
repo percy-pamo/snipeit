@@ -39,7 +39,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Corrige permisos
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
+    && chmod -R 755 /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
 # Expone el puerto 80
