@@ -1,7 +1,6 @@
-# Usa PHP 8.3 con Apache
 FROM php:8.3-apache
 
-# Instala dependencias del sistema (¡formato correcto!)
+# Instala dependencias del sistema
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -14,31 +13,36 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     && docker-php-ext-install pdo pdo_mysql zip gd intl bcmath sodium
 
-# Habilita mod_rewrite y headers
+# Habilita mod_rewrite
 RUN a2enmod rewrite headers
+
+# Crea usuario no-root
+RUN useradd -G www-data,root -d /home/snipe snipe \
+    && mkdir -p /home/snipe \
+    && chown -R snipe:snipe /home/snipe
 
 # Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Directorio de trabajo
+# Directorio de trabajo y usuario
 WORKDIR /var/www/html
+USER snipe
 
-# 1. Copia solo los archivos necesarios primero
-COPY composer.json composer.lock ./
+# 1. Copia solo los archivos necesarios para composer
+COPY --chown=snipe:snipe composer.json composer.lock ./
 
-# 2. Instala dependencias (sin archivos de desarrollo)
+# 2. Instala dependencias
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # 3. Copia el resto del código
-COPY . .
+COPY --chown=snipe:snipe . .
 
-# Permisos (incluyendo vendor/)
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && chmod -R 775 storage bootstrap/cache vendor
+# Permisos
+RUN chmod -R 775 storage bootstrap/cache vendor
 
 # Puerto expuesto
 EXPOSE 80
 
-# Comando de inicio
+# Comando de inicio (como root)
+USER root
 CMD ["apache2-foreground"]
