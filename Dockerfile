@@ -1,38 +1,50 @@
+# Usa PHP 8.3 con Apache
 FROM php:8.3-apache
 
-# 1. Instalación de extensiones necesarias (PHP 8.2+)
+# Instala paquetes del sistema
 RUN apt-get update && apt-get install -y \
-    git unzip curl libpng-dev libonig-dev libxml2-dev zip libzip-dev supervisor \
-    libjpeg-dev libfreetype6-dev libicu-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl xml bcmath intl gd \
-    && docker-php-ext-enable sodium
+    git \
+    unzip \
+    zip \
+    curl \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    libonig-dev \
+    libpq-dev \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        gd \
+        zip \
+        opcache \
+    && apt-get clean
 
-# 2. Habilitar mod_rewrite para Laravel
+# Instala Composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+
+# Habilita mod_rewrite de Apache
 RUN a2enmod rewrite
 
-# 3. Copiar el código del proyecto
+# Copia el código fuente
 COPY . /var/www/html
 
-# 4. Copiar configuración de supervisord
-COPY docker/supervisord.conf /etc/supervisord.conf
-
-# 5. Ajustar permisos (storage, cache)
+# Ajusta permisos
 RUN chown -R www-data:www-data /var/www/html \
- && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+ && chmod +x /var/www/html/artisan
 
-# 6. Definir directorio de trabajo
+# Directorio de trabajo
 WORKDIR /var/www/html
 
-# 7. Instalar Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Instala dependencias PHP
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# 8. Instalar dependencias PHP
-RUN composer install --no-dev --optimize-autoloader
-
-# 9. Exponer el puerto HTTP
+# Expone el puerto 80
 EXPOSE 80
 
-# 10. Iniciar supervisord para Apache y scheduler
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
-
+# Comando por defecto (solo Apache, no supervisord)
+CMD ["apache2-foreground"]
