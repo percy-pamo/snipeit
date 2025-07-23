@@ -1,45 +1,44 @@
+# Usa la imagen oficial de PHP 8.3 con Apache
 FROM php:8.3-apache
 
-# 1. Instala dependencias del sistema (incluyendo GD, Sodium, ZIP)
+# Variables de entorno para Composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_HOME=/composer
+
+# Instala Composer (copiado desde la imagen oficial de Composer)
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+
+# Instala extensiones necesarias
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    libpq-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
-    libicu-dev \
-    libsodium-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
-        pdo \
-        pdo_mysql \
-        zip \
-        intl \
-        gd \
-        sodium
+    zip \
+    curl \
+    && docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    gd \
+    zip
 
-# 2. Habilita mod_rewrite
+# Activa el módulo de reescritura de Apache
 RUN a2enmod rewrite
 
-# 3. Instala Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Copia los archivos del proyecto al contenedor
+COPY . /var/www/html
 
-# 4. Directorio de trabajo
+# Establece el directorio de trabajo
 WORKDIR /var/www/html
 
-# 5. Copia SOLO archivos necesarios para composer
-COPY composer.json composer.lock ./
+# Instala dependencias de PHP vía Composer
+RUN composer install --no-dev --optimize-autoloader
 
-# 6. Instala dependencias (sin desarrollo)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Da permisos correctos a Apache
+RUN chown -R www-data:www-data /var/www/html
 
-# 7. Copia el resto del proyecto
-COPY . .
-
-# 8. Ajusta permisos
-RUN chmod -R 775 storage bootstrap/cache
-
-# 9. Puerto y comando
+# Expone el puerto del servidor
 EXPOSE 80
-CMD ["apache2-foreground"]
