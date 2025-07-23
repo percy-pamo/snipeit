@@ -1,44 +1,49 @@
-# Usa la imagen oficial de PHP 8.3 con Apache
+# Usa PHP 8.3 con Apache
 FROM php:8.3-apache
 
-# Variables de entorno para Composer
-ENV COMPOSER_ALLOW_SUPERUSER=1
-ENV COMPOSER_HOME=/composer
-
-# Instala Composer (copiado desde la imagen oficial de Composer)
-COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
-
-# Instala extensiones necesarias
+# Instala dependencias del sistema
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
-    libpq-dev \
+    curl \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
     libzip-dev \
     zip \
-    curl \
-    && docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    gd \
-    zip
+    libpq-dev \
+    libicu-dev \
+    libmcrypt-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libxslt1-dev \
+    libjpeg62-turbo-dev \
+    && docker-php-ext-install pdo pdo_mysql zip gd bcmath
 
-# Activa el módulo de reescritura de Apache
+# Habilita mod_rewrite
 RUN a2enmod rewrite
+
+# Instala Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Establece directorio de trabajo
+WORKDIR /var/www/html
 
 # Copia los archivos del proyecto al contenedor
 COPY . /var/www/html
 
-# Establece el directorio de trabajo
-WORKDIR /var/www/html
+# Instala dependencias PHP
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Instala dependencias de PHP vía Composer
-RUN composer install --no-dev --optimize-autoloader
+# Corrige permisos
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
 
-# Da permisos correctos a Apache
-RUN chown -R www-data:www-data /var/www/html
-
-# Expone el puerto del servidor
+# Expone el puerto 80
 EXPOSE 80
+
+# Define el comando por defecto
+CMD ["apache2-foreground"]
