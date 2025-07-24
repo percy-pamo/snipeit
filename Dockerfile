@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y \
 # Habilita mod_rewrite
 RUN a2enmod rewrite
 
+# Configura el DocumentRoot de Apache para apuntar a /public
+RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+
 # Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
