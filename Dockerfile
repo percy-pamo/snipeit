@@ -21,6 +21,11 @@ WORKDIR /var/www/html
 # 5. Copia SOLO los archivos esenciales para composer (incluyendo artisan)
 COPY composer.json composer.lock artisan ./
 
+# Verificando la copia de composer.json composer.lock y artisan
+RUN ls -la composer.json  # Lista el archivo composer.json
+RUN ls -la composer.lock  # Lista el archivo composer.lock
+RUN ls -la artisan  # Lista el archivo artisan
+
 # 6. Instala dependencias (deshabilita scripts post-install para evitar el error)
 RUN php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
