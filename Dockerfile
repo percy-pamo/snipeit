@@ -36,6 +36,8 @@ COPY . /var/www/html
 
 # Instala dependencias PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
+#Agregado ultimo
+RUN composer dump-autoload --optimize
 
 # Corrige permisos
 RUN chown -R www-data:www-data /var/www/html \
