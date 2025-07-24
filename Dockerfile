@@ -11,25 +11,26 @@ RUN apt-get update && apt-get install -y \
 RUN a2enmod rewrite && \
     sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-# 3. Instala Composer
+# 3. Instala Composer y permite ejecución como root (necesario en Docker)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# 4. Directorio de trabajo y permisos iniciales
+# 4. Directorio de trabajo
 WORKDIR /var/www/html
-RUN chown -R www-data:www-data /var/www/html
 
-# 5. Copia solo composer.json y composer.lock
-COPY composer.json composer.lock ./
+# 5. Copia SOLO los archivos necesarios para composer (incluyendo database/)
+COPY composer.json composer.lock ./ 
+COPY database/ database/
 
-# 6. Instala dependencias (con reintento y memoria ilimitada)
-RUN php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction || \
-    (echo "Reintentando composer install..." && php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction)
+# 6. Instala dependencias (con memoria ilimitada)
+RUN php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction
 
 # 7. Copia el resto del proyecto
 COPY . .
 
-# 8. Ajusta permisos finales
-RUN chmod -R 775 storage bootstrap/cache vendor
+# 8. Ajusta permisos
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache vendor
 
 EXPOSE 80
 CMD ["apache2-foreground"]
