@@ -1,43 +1,55 @@
 FROM php:8.3-apache
 
-# 1. Instala dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    git unzip libpng-dev libjpeg-dev libfreetype6-dev \
-    libzip-dev libicu-dev libonig-dev libxml2-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql zip gd intl bcmath
+# 1. Configuración inicial
+ENV COMPOSER_PROCESS_TIMEOUT=900 \
+    COMPOSER_PREFER_DIST=1 \
+    COMPOSER_ALLOW_SUPERUSER=1
 
-# 2. Configura Apache
+# 2. Instala dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    curl \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    libpq-dev \
+    libicu-dev \
+    libmcrypt-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libxslt1-dev \
+    libjpeg62-turbo-dev \
+    && docker-php-ext-install pdo pdo_mysql zip gd bcmath \
+	&& docker-php-ext-enable sodium
+	
+# 3. Configura Apache
 RUN a2enmod rewrite && \
     sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-# 3. Instala Composer y permite ejecución como root
+# 4. Instala Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# 4. Directorio de trabajo
+# 5. Directorio de trabajo
 WORKDIR /var/www/html
 
-# 5. Copia SOLO los archivos esenciales para composer (incluyendo artisan)
-COPY composer.json composer.lock artisan ./
+# 6. Copia archivos esenciales primero
+COPY composer.json composer.lock ./
 
-# Verificando la copia de composer.json composer.lock y artisan
-RUN ls -la composer.json  # Lista el archivo composer.json
-RUN ls -la composer.lock  # Lista el archivo composer.lock
-RUN ls -la artisan  # Lista el archivo artisan
+# 7. Instala dependencias
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# 6. Instala dependencias (deshabilita scripts post-install para evitar el error)
-RUN php -d memory_limit=-1 /usr/bin/composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-# 7. Copia el resto del proyecto
+# 8. Copia el resto del proyecto
 COPY . .
 
-# 8. Ejecuta los scripts de artisan MANUALMENTE después de copiar todo
-RUN php artisan package:discover --ansi
-
-# 9. Ajusta permisos
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache vendor
+# 9. Configuración de Laravel
+RUN php artisan key:generate && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 775 storage bootstrap/cache vendor
 
 EXPOSE 80
 CMD ["apache2-foreground"]
