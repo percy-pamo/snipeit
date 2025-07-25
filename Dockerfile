@@ -41,7 +41,8 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 
 # 7. Instala dependencias
-RUN composer install #--no-dev --optimize-autoloader --no-interaction
+RUN composer install
+#RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # 8. Copia el resto del proyecto
 COPY . .
