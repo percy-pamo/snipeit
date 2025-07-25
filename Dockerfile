@@ -44,7 +44,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # 8. Copia el resto del proyecto
-COPY . .
+#COPY . .
 
 # 9. Configuración de Laravel
 RUN php artisan key:generate && \
